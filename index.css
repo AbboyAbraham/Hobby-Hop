@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gradient-to-br from-slate-900 to-teal-900 min-h-screen text-white;
+  margin: 0;
+  font-family: sans-serif;
+}
