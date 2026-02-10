@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Project, ExploreSuggestion } from '../types';
 
 const getClient = () => {
@@ -7,62 +7,62 @@ const getClient = () => {
     console.warn("API_KEY is missing. Gemini features will not work.");
     return null;
   }
-  return new GoogleGenAI({ apiKey });
+  // Fixed: Use GoogleGenerativeAI and pass the string directly
+  return new GoogleGenerativeAI(apiKey);
 };
 
 export const getHobbySuggestions = async (currentProjects: Project[]): Promise<ExploreSuggestion[]> => {
-  const ai = getClient();
-  if (!ai) return [];
+  const genAI = getClient();
+  if (!genAI) return [];
 
   const existingHobbies = currentProjects.map(p => p.title).join(", ");
   
+  // Fixed: Use gemini-1.5-flash (stable and fast)
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            title: { type: SchemaType.STRING },
+            description: { type: SchemaType.STRING },
+            estimatedCost: { type: SchemaType.STRING },
+            difficulty: { type: SchemaType.STRING },
+            tags: { 
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING }
+            },
+          },
+          required: ["title", "description", "estimatedCost", "difficulty", "tags"],
+        },
+      },
+    },
+  });
+
   const prompt = `
     ## ROLE
-    You are an expert Creative Consultant and Hobby Matchmaker powering the "Explore" tab of an app called Hobby Hop. 
-    Your tone is encouraging, inspiring, and highly practical.
-
+    You are an expert Creative Consultant and Hobby Matchmaker for the "Hobby Hop" app. 
+    
     ## TASK
-    The user lists these current interests/projects: ${existingHobbies || "None yet, looking for something new"}. 
-    Your job is to generate exactly 5 specific, actionable hobby project suggestions that blend or align with these interests.
+    The user is currently doing these projects: ${existingHobbies || "None yet"}. 
+    Generate exactly 5 specific, actionable hobby project suggestions that align with these interests.
 
-    ## CONSTRAINTS & RULES
-    1. Do not provide vague hobbies (e.g., "Gardening"). Provide specific *projects* (e.g., "Build an Indoor Automated Herb Planter").
-    2. Keep descriptions under 3 sentences. They must be punchy and exciting.
-    3. Provide a realistic estimated cost in USD based on required materials.
-    4. ONLY return valid JSON. Do not include introductory text.
-
-    ## OUTPUT FORMAT
-    You must respond strictly with a JSON array containing 5 objects following the schema provided.
+    ## CONSTRAINTS
+    1. Provide specific projects, not general categories.
+    2. Descriptions must be under 3 sentences.
+    3. Return ONLY valid JSON.
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              estimatedCost: { type: Type.STRING },
-              difficulty: { type: Type.STRING },
-              tags: { 
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              },
-            },
-            required: ["title", "description", "estimatedCost", "difficulty", "tags"],
-          },
-        },
-      },
-    });
-
-    if (response.text) {
-      return JSON.parse(response.text) as ExploreSuggestion[];
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    if (text) {
+      return JSON.parse(text) as ExploreSuggestion[];
     }
     return [];
   } catch (error) {
