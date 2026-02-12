@@ -1,7 +1,7 @@
 
 # This is an app developed using Google AI Studio. 
 
-This contains everything you need to run your app locally
+This contains everything you need to run the hobby tracking app locally
 
 ## Run Locally
 
