@@ -23,10 +23,24 @@ export const getHobbySuggestions = async (currentProjects: any[]): Promise<any[]
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `
-    Suggest 5 hobbies based on: ${existingHobbies}.
-    Return JSON array with title, description, estimatedCost, difficulty, tags.
-    No markdown.
-  `;
+You are an expert Creative Consultant for a hobby app.
+The user is currently doing these projects: ${existingHobbies || "None yet"}.
+
+Generate exactly 5 specific, actionable hobby project suggestions.
+
+RETURN ONLY RAW JSON. Do not use Markdown formatting.
+
+The JSON must be a list of objects with this structure:
+[
+  {
+    "title": "Project Name",
+    "description": "Short description",
+    "estimatedCost": "$20-50",
+    "difficulty": "Beginner",
+    "tags": ["tag1", "tag2"]
+  }
+]
+`;
 
   try {
     const result = await model.generateContent(prompt);
