@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Project, ExploreSuggestion } from '../types';
 
 const getClient = () => {
-  // @ts-ignore - Ignores potential import.meta errors
+  // @ts-ignore - Ignores potential env variable issues
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("API_KEY is missing. Gemini features will not work.");
@@ -15,56 +15,42 @@ export const getHobbySuggestions = async (currentProjects: Project[]): Promise<E
   const genAI = getClient();
   if (!genAI) return [];
 
-  const existingHobbies = currentProjects.map(p => p.title).join(", ");
+  const existingHobbies = currentProjects.map(p => p.name).join(", ");
   
+  // FIXED: Removed 'responseMimeType' and 'responseSchema' which were causing the crash
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    // @ts-ignore - We force this config to pass even if types are old
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "ARRAY", // We use the string "ARRAY" instead of SchemaType.ARRAY
-        items: {
-          type: "OBJECT",
-          properties: {
-            title: { type: "STRING" },
-            description: { type: "STRING" },
-            estimatedCost: { type: "STRING" },
-            difficulty: { type: "STRING" },
-            tags: { 
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-          },
-          required: ["title", "description", "estimatedCost", "difficulty", "tags"],
-        },
-      },
-    },
   });
 
   const prompt = `
-    ## ROLE
-    You are an expert Creative Consultant and Hobby Matchmaker for the "Hobby Hop" app. 
-     
-    ## TASK
-    The user is currently doing these projects: ${existingHobbies || "None yet"}. 
-    Generate exactly 5 specific, actionable hobby project suggestions that align with these interests.
-
-    ## CONSTRAINTS
-    1. Provide specific projects, not general categories.
-    2. Descriptions must be under 3 sentences.
-    3. Return ONLY valid JSON.
+    You are an expert Creative Consultant for a hobby app.
+    The user is currently doing these projects: ${existingHobbies || "None yet"}.
+    
+    Generate exactly 5 specific, actionable hobby project suggestions.
+    
+    RETURN ONLY RAW JSON. Do not use Markdown formatting (no \`\`\`json or \`\`\`).
+    
+    The JSON must be a list of objects with this structure:
+    [
+      {
+        "title": "Project Name",
+        "description": "Short description",
+        "estimatedCost": "$20-50",
+        "difficulty": "Beginner",
+        "tags": ["tag1", "tag2"]
+      }
+    ]
   `;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
     
-    if (text) {
-      return JSON.parse(text) as ExploreSuggestion[];
-    }
-    return [];
+    // Clean up the text just in case the AI adds Markdown
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    return JSON.parse(text) as ExploreSuggestion[];
   } catch (error) {
     console.error("Failed to fetch hobby suggestions:", error);
     return [];
