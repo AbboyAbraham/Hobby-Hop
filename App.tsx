@@ -5,11 +5,20 @@ import { MyHobbies } from './views/MyHobbies';
 import { ShoppingList } from './views/ShoppingList';
 import { Explore } from './views/Explore';
 import { Account } from './views/Account';
+import { LandingPage } from './views/LandingPage'; // <--- New Import
 import { Tab } from './types';
 
 const App: React.FC = () => {
   const store = useHobbyStore();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Hobbies);
+  
+  // 1. New State: Controls if we show the landing page or the app
+  const [showLanding, setShowLanding] = useState(true);
+
+  // 2. The Gatekeeper: If showLanding is true, stop here and render the landing page
+  if (showLanding) {
+    return <LandingPage onStart={() => setShowLanding(false)} />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
