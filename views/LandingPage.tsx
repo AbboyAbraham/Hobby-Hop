@@ -44,7 +44,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       
       {/* Footer Text */}
       <p className="absolute bottom-8 text-sm text-white/30">
-        Powered by Gemini AI
+        Track your Hobbies, Shopping cart and discover new Hobbies with a Click
       </p>
     </div>
   );
