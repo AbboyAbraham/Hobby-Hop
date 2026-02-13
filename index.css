@@ -2,8 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gradient-to-br from-slate-900 to-teal-900 min-h-screen text-white;
-  margin: 0;
-  font-family: sans-serif;
+@layer base {
+  body {
+    /* Smoother font rendering for dark backgrounds */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Modern system font stack */
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 
+                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    
+    /* Fixed background ensures the gradient doesn't "reset" when scrolling */
+    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 
+           min-h-screen text-slate-100 bg-fixed;
+    margin: 0;
+  }
 }
