@@ -16,8 +16,10 @@
     @apply bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 
            min-h-screen text-slate-100 bg-fixed;
     margin: 0;
-    
-    @layer components {
+  }
+}
+
+@layer components {
   .glass-card {
     @apply bg-white/5 backdrop-blur-md border border-white/10 
            shadow-xl transition-all duration-300 hover:bg-white/10;
