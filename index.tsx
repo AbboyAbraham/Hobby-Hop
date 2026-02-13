@@ -1,7 +1,3 @@
-import './index.css';
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -49,6 +45,10 @@ class ErrorBoundary extends Component<Props, State> {
     return this.children;
   }
 }
+import './index.css';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
 
 export default ErrorBoundary;
 
