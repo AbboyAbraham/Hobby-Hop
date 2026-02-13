@@ -1,47 +1,76 @@
 // @ts-nocheck
 
 export const getHobbySuggestions = async (currentProjects) => {
-  // 1. Get the Key safely
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     alert("API Key is missing!");
     return [];
   }
 
-  // 2. Prepare the Prompt
-  const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
-  const promptText = `
-    Suggest 5 hobbies based on: ${existingHobbies || "General interests"}.
-    Return JSON array: [{"title": "Name", "description": "Desc", "estimatedCost": "$", "difficulty": "Level", "tags": []}].
-    No markdown.
-  `;
-
-  // 3. The "Direct Line" - We call Google's server directly, bypassing the broken library
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
   try {
-    const response = await fetch(url, {
+    // STEP 1: Dynamically find a valid model
+    // We ask Google: "What models are available to THIS key?"
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const listResponse = await fetch(listUrl);
+    const listData = await listResponse.json();
+
+    if (!listData.models) {
+      throw new Error("API Key is valid, but no models are available. Check Google Cloud Console.");
+    }
+
+    // specific logic to find the best model you have access to
+    // We look for 'flash' first (fastest), then 'pro' (standard), then any gemini model.
+    let activeModel = listData.models.find(m => 
+      m.name.includes("gemini-1.5-flash") && m.supportedGenerationMethods.includes("generateContent")
+    );
+
+    if (!activeModel) {
+      activeModel = listData.models.find(m => 
+        m.name.includes("gemini-pro") && m.supportedGenerationMethods.includes("generateContent")
+      );
+    }
+
+    // Fallback: Just take the first one that works
+    if (!activeModel) {
+      activeModel = listData.models.find(m => 
+        m.name.includes("gemini") && m.supportedGenerationMethods.includes("generateContent")
+      );
+    }
+
+    if (!activeModel) {
+      throw new Error("No Gemini models found for this API Key.");
+    }
+
+    console.log("FOUND WORKING MODEL:", activeModel.name); // Check your console to see which one it picked!
+
+    // STEP 2: Use that exact model to generate content
+    const generateUrl = `https://generativelanguage.googleapis.com/v1beta/${activeModel.name}:generateContent?key=${apiKey}`;
+    
+    const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
+    const promptText = `
+      Suggest 5 hobbies based on: ${existingHobbies || "General interests"}.
+      Return ONLY a JSON array with this structure:
+      [{"title": "Title", "description": "Desc", "estimatedCost": "$", "difficulty": "Level", "tags": []}]
+    `;
+
+    const response = await fetch(generateUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: promptText }]
-        }]
+        contents: [{ parts: [{ text: promptText }] }]
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error.message || "Server Error");
+    const data = await response.json();
+    
+    // Check for errors in the response body
+    if (data.error) {
+      throw new Error(data.error.message);
     }
 
-    const data = await response.json();
+    // STEP 3: Parse the result
     const rawText = data.candidates[0].content.parts[0].text;
-
-    // 4. Clean and Parse
-    let cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     const jsonStart = cleanText.indexOf('[');
     const jsonEnd = cleanText.lastIndexOf(']') + 1;
     
@@ -51,8 +80,8 @@ export const getHobbySuggestions = async (currentProjects) => {
     return [];
 
   } catch (error) {
-    console.error("Direct Fetch Error:", error);
-    alert(`Connection Failed: ${error.message}`);
+    console.error("Auto-Discovery Failed:", error);
+    alert(`Error: ${error.message}`);
     return [];
   }
 };
