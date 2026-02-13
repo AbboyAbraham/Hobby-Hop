@@ -16,14 +16,27 @@ export const getHobbySuggestions = async (currentProjects) => {
 
   const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
   
-  // We use the most standard model name. 
-  // If this fails with 404, the API Key permissions are definitely the issue.
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // CHANGED: We are using 'gemini-pro' because it is the most stable and available model.
+  // If 'flash' gives you a 404, this is the fix.
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
   const prompt = `
-    Suggest 5 hobbies based on: ${existingHobbies}.
-    Return raw JSON array with title, description, estimatedCost, difficulty, tags.
-    No markdown.
+    You are a hobby expert.
+    The user likes: ${existingHobbies || "Nothing yet"}.
+    
+    Suggest 5 new hobbies.
+    Return ONLY a raw JSON array. Do not use Markdown blocks.
+    
+    JSON Format:
+    [
+      {
+        "title": "Hobby Name",
+        "description": "Short description",
+        "estimatedCost": "$20-50",
+        "difficulty": "Beginner",
+        "tags": ["Creative", "Relaxing"]
+      }
+    ]
   `;
 
   try {
@@ -31,27 +44,21 @@ export const getHobbySuggestions = async (currentProjects) => {
     const response = await result.response;
     let text = response.text();
     
-    // Clean text
+    // Clean text (Gemini Pro loves adding markdown, so we strip it)
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     // Parse JSON
     const jsonStart = text.indexOf('[');
     const jsonEnd = text.lastIndexOf(']') + 1;
+    
     if (jsonStart === -1) throw new Error("Invalid JSON format");
     
-    return JSON.parse(text.substring(jsonStart, jsonEnd));
+    const cleanJson = text.substring(jsonStart, jsonEnd);
+    return JSON.parse(cleanJson);
 
   } catch (error) {
     console.error("Gemini Error:", error);
-    
-    // EXPLAINING THE ERROR TO YOU
-    if (error.message.includes("404")) {
-      alert("Error 404: AI Error ");
-    } else if (error.message.includes("429")) {
-      alert("Error 429: You have hit the AI Studio API Free Tier Limit! Wait 60 seconds and try again.");
-    } else {
-      alert(`Unknown Error: ${error.message}`);
-    }
+    alert(`AI Error: ${error.message}`);
     return [];
   }
 };
