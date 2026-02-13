@@ -7,15 +7,6 @@ export const getHobbySuggestions = async (currentProjects) => {
     return [];
   }
 
-  // THE SAFE LIST: We only try models that are confirmed to be free.
-  // We try Flash first (fastest), then Pro (fallback).
-  const safeModels = [
-    "models/gemini-1.5-flash",
-    "models/gemini-1.5-flash-001",
-    "models/gemini-1.5-pro",
-    "models/gemini-1.0-pro"
-  ];
-
   const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
   const promptText = `
     Suggest 5 hobbies based on: ${existingHobbies || "General interests"}.
@@ -23,45 +14,68 @@ export const getHobbySuggestions = async (currentProjects) => {
     [{"title": "Title", "description": "Desc", "estimatedCost": "$", "difficulty": "Level", "tags": []}]
   `;
 
-  // Loop through the Safe List until one works
-  for (const modelName of safeModels) {
-    try {
-      console.log(`Attempting to use: ${modelName}...`);
-      
-      const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }]
-        })
-      });
+  try {
+    // 1. Ask Google for the list of ALL available models
+    console.log("Fetching model list...");
+    const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const listData = await listResponse.json();
 
-      const data = await response.json();
+    if (!listData.models) throw new Error("No models found for this API Key.");
 
-      // If specific model fails (e.g. 404 or Quota 0), we skip to the next one
-      if (!response.ok || data.error) {
-        console.warn(`Model ${modelName} failed:`, data.error?.message);
-        continue; 
+    // 2. Sort the models: Put 'flash' first (fastest/free), then 'pro', then everything else.
+    // This ensures we try the likely free ones before hitting the 'gemini-3' trap.
+    const sortedModels = listData.models.sort((a, b) => {
+      if (a.name.includes("flash")) return -1;
+      if (b.name.includes("flash")) return 1;
+      return 0;
+    });
+
+    // 3. THE SMART LOOP: Try them one by one.
+    for (const model of sortedModels) {
+      if (!model.supportedGenerationMethods.includes("generateContent")) continue;
+
+      try {
+        console.log(`Trying model: ${model.name}...`);
+        
+        const generateUrl = `https://generativelanguage.googleapis.com/v1beta/${model.name}:generateContent?key=${apiKey}`;
+        const response = await fetch(generateUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+
+        const data = await response.json();
+
+        // If this specific model fails (like gemini-3-pro), just Log it and CONTINUE to the next one.
+        if (data.error) {
+          console.warn(`Skipping ${model.name}: ${data.error.message}`);
+          continue; 
+        }
+
+        // SUCCESS! We found a working model.
+        const rawText = data.candidates[0].content.parts[0].text;
+        const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const jsonStart = cleanText.indexOf('[');
+        const jsonEnd = cleanText.lastIndexOf(']') + 1;
+        
+        if (jsonStart !== -1) {
+          console.log(`Success with ${model.name}!`);
+          return JSON.parse(cleanText.substring(jsonStart, jsonEnd));
+        }
+
+      } catch (innerError) {
+        // Ignore errors for individual models and keep looping
+        console.warn(`Model ${model.name} crashed, trying next...`);
       }
-
-      // SUCCESS! Parse the result
-      const rawText = data.candidates[0].content.parts[0].text;
-      const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const jsonStart = cleanText.indexOf('[');
-      const jsonEnd = cleanText.lastIndexOf(']') + 1;
-      
-      if (jsonStart !== -1) {
-        return JSON.parse(cleanText.substring(jsonStart, jsonEnd));
-      }
-
-    } catch (error) {
-      console.error(`Error with ${modelName}:`, error);
-      // Continue to next model...
     }
-  }
 
-  alert("All safe models failed. Please check your internet connection.");
-  return [];
+    throw new Error("All available models failed.");
+
+  } catch (error) {
+    console.error("Critical Error:", error);
+    alert(`App Error: ${error.message}`);
+    return [];
+  }
 };
