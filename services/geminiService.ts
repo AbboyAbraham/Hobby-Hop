@@ -18,7 +18,7 @@ export const getHobbySuggestions = async (currentProjects: any[]): Promise<any[]
   if (!genAI) return [];
 
   // @ts-ignore
-  const existingHobbies = currentProjects.map(p => p.name).join(", ");
+  const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
   
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
