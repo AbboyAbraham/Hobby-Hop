@@ -2,11 +2,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const getClient = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    alert("CRITICAL ERROR: API Key is missing! Check Vercel Settings.");
+  const rawKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!rawKey) {
+    alert("CRITICAL: API Key is missing in Vercel!");
     return null;
   }
+  // SAFETY FIX: Remove accidental spaces from copy-pasting
+  const apiKey = rawKey.trim();
   return new GoogleGenerativeAI(apiKey);
 };
 
@@ -16,6 +18,9 @@ export const getHobbySuggestions = async (currentProjects) => {
 
   const existingHobbies = currentProjects.map(p => p.name || p.title).join(", ");
   
+  // Use the standard Flash model
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
   const prompt = `
     You are a hobby expert.
     The user likes: ${existingHobbies || "Nothing yet"}.
@@ -35,42 +40,27 @@ export const getHobbySuggestions = async (currentProjects) => {
     ]
   `;
 
-  // RETRY LOGIC: Try Flash-001 first, then fallback to Pro
   try {
-    // Attempt 1: Specific Flash Version
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
     const result = await model.generateContent(prompt);
-    return parseResponse(result);
-  } catch (error) {
-    console.warn("Flash model failed, trying fallback...", error);
+    const response = await result.response;
+    let text = response.text();
     
-    try {
-      // Attempt 2: Fallback to Gemini Pro (The "Old Reliable")
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro" });
-      const fallbackResult = await fallbackModel.generateContent(prompt);
-      return parseResponse(fallbackResult);
-    } catch (finalError) {
-      console.error("All AI models failed:", finalError);
-      alert("AI Service is temporarily unavailable. Please check your API Key limits.");
-      return [];
-    }
-  }
-};
+    // Clean up response
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Extract JSON array
+    const jsonStart = text.indexOf('[');
+    const jsonEnd = text.lastIndexOf(']') + 1;
+    
+    if (jsonStart === -1 || jsonEnd === 0) throw new Error("AI returned invalid data");
+    
+    const cleanJson = text.substring(jsonStart, jsonEnd);
+    return JSON.parse(cleanJson);
 
-// Helper to clean messy AI responses
-const parseResponse = async (result) => {
-  const response = await result.response;
-  let text = response.text();
-  
-  // Remove markdown code blocks if present
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  
-  // Find the JSON array brackets to ignore any extra text
-  const jsonStart = text.indexOf('[');
-  const jsonEnd = text.lastIndexOf(']') + 1;
-  
-  if (jsonStart === -1 || jsonEnd === 0) return [];
-  
-  const cleanJson = text.substring(jsonStart, jsonEnd);
-  return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("AI Error:", error);
+    // This alert will now show the EXACT reason from Google
+    alert(`Google AI Error: ${error.message}`);
+    return [];
+  }
 };
