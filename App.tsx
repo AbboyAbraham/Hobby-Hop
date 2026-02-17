@@ -85,13 +85,15 @@ export const useHobbyStore = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    // FIXED: Corrected the template literal below for the filename
-    link.download = `hobby-hop-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    
+    // Using standard quotes and "+" to avoid backtick encoding errors
+    const dateString = new Date().toISOString().slice(0, 10);
+    link.download = "hobby-hop-backup-" + dateString + ".json";
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-
   const importData = (jsonData: string) => {
     try {
       const parsed: AppData = JSON.parse(jsonData);
