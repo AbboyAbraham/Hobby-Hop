@@ -21,7 +21,8 @@ const App: React.FC = () => {
 
   // 2. This will now show every single time the app is searched/loaded
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} />;
+    return <LandingPage onStart={() => setShowLanding(false)}
+             isReturningUser={store.hasSeenTutorial} >;
   }
 
   const renderContent = () => {
