@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Project, Material, AppData } from '../types';
+import { Project, Material, AppData } from './types';
 
 const STORAGE_KEY = 'hobby_hop_data_v2';
 
