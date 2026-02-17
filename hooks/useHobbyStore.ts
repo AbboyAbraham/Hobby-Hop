@@ -4,42 +4,9 @@ import { Project, Material, AppData, Note } from '../types';
 const STORAGE_KEY = 'hobby_hop_data_v2'; // Bumped version to v2 for schema change
 
 const DEFAULT_DATA: AppData = {
-  projects: [
-    {
-      id: '1',
-      title: 'Terrarium Building',
-      description: 'Creating a moss ecosystem in a jar.',
-      category: 'Gardening',
-      imageUrl: 'https://picsum.photos/id/62/400/300',
-      notes: [
-        { id: 'n1', content: 'Need to find activated charcoal.', createdAt: Date.now() }
-      ],
-      status: 'in_progress',
-      progress: 45,
-      endGoal: 'Create a self-sustaining moss ecosystem in the 5L jar.',
-      createdAt: Date.now(),
-    },
-    {
-      id: '2',
-      title: 'Oil Painting',
-      description: 'Learning landscape techniques.',
-      category: 'Art',
-      imageUrl: 'https://picsum.photos/id/104/400/300',
-      notes: [
-        { id: 'n2', content: 'Focus on color mixing this week.', createdAt: Date.now() - 100000 }
-      ],
-      status: 'planned',
-      progress: 10,
-      endGoal: 'Complete a replica of a Bob Ross mountain scene.',
-      createdAt: Date.now() - 100000,
-    }
-  ],
-  materials: [
-    { id: 'm1', projectId: '1', name: 'Glass Jar', price: 15.50, isBought: true },
-    { id: 'm2', projectId: '1', name: 'Moss Pack', price: 8.00, isBought: false },
-    { id: 'm3', projectId: '2', name: 'Canvas Set', price: 25.00, isBought: false },
-    { id: 'm4', projectId: '2', name: 'Oil Paint Set', price: 45.00, isBought: true },
-  ]
+  projects: [], // Emptied
+  materials: [], // Emptied
+  hasSeenTutorial: false // New flag to track tutorial status
 };
 
 export const useHobbyStore = () => {
