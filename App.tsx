@@ -47,6 +47,10 @@ export const useHobbyStore = () => {
         setProjects([]);
         setMaterials([]);
       }
+    } else {
+      setProjects(DEFAULT_DATA.projects);
+      setMaterials(DEFAULT_DATA.materials);
+      setHasSeenTutorial(DEFAULT_DATA.hasSeenTutorial);
     }
     setLoaded(true);
   }, []);
@@ -81,7 +85,7 @@ export const useHobbyStore = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    // FIXED: Ensured backticks are correctly closed here
+    // FIXED: Corrected the template literal below for the filename
     link.download = `hobby-hop-backup-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
