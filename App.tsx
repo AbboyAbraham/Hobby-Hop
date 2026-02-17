@@ -1,32 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { useHobbyStore } from './hooks/useHobbyStore'; // Correct relative path
+import React, { useState } from 'react';
+import { useHobbyStore } from './hooks/useHobbyStore';
 import { BottomNav } from './components/BottomNav';
 import { MyHobbies } from './views/MyHobbies';
 import { ShoppingList } from './views/ShoppingList';
 import { Explore } from './views/Explore';
 import { Account } from './views/Account';
 import { LandingPage } from './views/LandingPage'; 
-import { Tab } from './types'; // Corrected path from ../types to ./types
+import { Tab } from './types';
 import AnimatedContent from './components/AnimatedContent';
 
 const App: React.FC = () => {
   const store = useHobbyStore();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Hobbies);
+  
+  // 1. Reset showLanding to true on every refresh
+  // We no longer skip this based on hasSeenTutorial
   const [showLanding, setShowLanding] = useState(true);
 
-  // Sync Landing Page with Tutorial status to avoid showing it to returning users
-  useEffect(() => {
-    if (store.loaded && store.hasSeenTutorial) {
-      setShowLanding(false);
-    }
-  }, [store.loaded, store.hasSeenTutorial]);
+  if (!store.loaded) return <div className="min-h-screen bg-slate-900" />;
 
-  // Prevent UI flickering while the store is loading from localStorage
-  if (!store.loaded) {
-    return <div className="min-h-screen bg-slate-900" />; 
-  }
-
-  // The Gatekeeper: Renders the landing page if showLanding is true
+  // 2. This will now show every single time the app is searched/loaded
   if (showLanding) {
     return <LandingPage onStart={() => setShowLanding(false)} />;
   }
@@ -47,27 +40,11 @@ const App: React.FC = () => {
           />
         );
       case Tab.Shopping:
-        return (
-          <ShoppingList 
-            projects={store.projects}
-            materials={store.materials}
-            onUpdateMaterial={store.updateMaterial}
-          />
-        );
+        return <ShoppingList projects={store.projects} materials={store.materials} onUpdateMaterial={store.updateMaterial} />;
       case Tab.Explore:
-        return (
-          <Explore 
-            projects={store.projects}
-            onAddProject={store.addProject}
-          />
-        );
+        return <Explore projects={store.projects} onAddProject={store.addProject} />;
       case Tab.Account:
-        return (
-          <Account 
-            onExport={store.exportData}
-            onImport={store.importData}
-          />
-        );
+        return <Account onExport={store.exportData} onImport={store.importData} />;
       default:
         return null;
     }
@@ -81,7 +58,7 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
 
-      {/* FIRST-TIME TUTORIAL OVERLAY */}
+      {/* 3. The Tutorial still only triggers if they've never completed it before */}
       {!store.hasSeenTutorial && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
           <AnimatedContent distance={40} direction="vertical" reverse duration={0.8}>
@@ -106,5 +83,4 @@ const App: React.FC = () => {
   );
 };
 
-// Essential default export for index.tsx to find this module
 export default App;
