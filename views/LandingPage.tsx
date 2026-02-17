@@ -5,16 +5,14 @@ import AnimatedContent from '../components/AnimatedContent';
 
 interface LandingPageProps {
   onStart: () => void;
+  isReturningUser: boolean; // 🟢 New prop added
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
-  // New state to trigger the exit animation locally
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, isReturningUser }) => {
   const [isExiting, setIsExiting] = useState(false);
 
   const handleStart = () => {
     setIsExiting(true);
-    // The onDisappearanceComplete callback in AnimatedContent 
-    // will eventually call the original onStart prop.
   };
 
   return (
@@ -43,21 +41,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         scale={1}
         threshold={0.1}
         delay={0.2}
-        // EXIT LOGIC:
-        disappearAfter={isExiting ? 0.01 : 0} // Trigger exit when isExiting is true
+        disappearAfter={isExiting ? 0.01 : 0}
         disappearDuration={0.8}
         disappearEase="power3.inOut"
-        onDisappearanceComplete={onStart} // Switch pages ONLY after animation finishes
+        onDisappearanceComplete={onStart}
       >
         {/* 3. STATIC CONTENT CONTAINER */}
         <div className={`relative z-10 max-w-md space-y-8 backdrop-blur-md bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl transition-opacity duration-700 ${isExiting ? 'opacity-0' : 'opacity-100'}`}>
           
-          {/* Logo / Icon */}
           <div className="mx-auto w-20 h-20 bg-gradient-to-tr from-hopTeal to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg rotate-3">
             <Sparkles className="w-10 h-10 text-white" />
           </div>
 
-          {/* Text */}
           <div className="space-y-4">
             <h1 className="text-4xl font-bold tracking-tight text-white">
               Hobby Hop
@@ -67,23 +62,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </p>
           </div>
 
-          {/* CTA Button */}
-          <button
-            onClick={handleStart}
-            disabled={isExiting}
-            className="group w-full py-4 px-6 bg-white text-slate-900 font-bold text-lg rounded-xl shadow-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isExiting ? 'Starting...' : 'Get Started'}
-            {!isExiting && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-          </button>
-
-        </div>
-      </AnimatedContent>
-      
-      {/* Footer Text - Fades out manually when exiting */}
-      <p className={`absolute bottom-8 text-sm text-white/30 z-10 transition-opacity duration-500 ${isExiting ? 'opacity-0' : 'opacity-100'}`}>
-        Track your Hobbies, Shopping cart and discover new Hobbies with a Click
-      </p>
-    </div>
-  );
-};
+          {/* CTA Buttons Container */}
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={handleStart}
+              disabled={isExiting}
+              className="group w-full py-4 px-6 bg-white text-slate-900 font-bold text-lg rounded-xl shadow-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isReturningUser ? 'Explore New Hobbies' : (isExiting ? 'Starting...' :
