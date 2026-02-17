@@ -32,6 +32,7 @@ export interface Project {
 export interface AppData {
   projects: Project[];
   materials: Material[];
+  hasSeenTutorial: boolean;
 }
 
 export enum Tab {
