@@ -1,115 +1,110 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Project, Material, AppData } from './types';
+import React, { useState, useEffect } from 'react';
+import { useHobbyStore } from './hooks/useHobbyStore'; // Correct relative path
+import { BottomNav } from './components/BottomNav';
+import { MyHobbies } from './views/MyHobbies';
+import { ShoppingList } from './views/ShoppingList';
+import { Explore } from './views/Explore';
+import { Account } from './views/Account';
+import { LandingPage } from './views/LandingPage'; 
+import { Tab } from './types'; // Corrected path from ../types to ./types
+import AnimatedContent from './components/AnimatedContent';
 
-const STORAGE_KEY = 'hobby_hop_data_v2';
+const App: React.FC = () => {
+  const store = useHobbyStore();
+  const [activeTab, setActiveTab] = useState<Tab>(Tab.Hobbies);
+  const [showLanding, setShowLanding] = useState(true);
 
-const DEFAULT_DATA: AppData = {
-  projects: [],
-  materials: [],
-  hasSeenTutorial: false 
+  // Sync Landing Page with Tutorial status to avoid showing it to returning users
+  useEffect(() => {
+    if (store.loaded && store.hasSeenTutorial) {
+      setShowLanding(false);
+    }
+  }, [store.loaded, store.hasSeenTutorial]);
+
+  // Prevent UI flickering while the store is loading from localStorage
+  if (!store.loaded) {
+    return <div className="min-h-screen bg-slate-900" />; 
+  }
+
+  // The Gatekeeper: Renders the landing page if showLanding is true
+  if (showLanding) {
+    return <LandingPage onStart={() => setShowLanding(false)} />;
+  }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case Tab.Hobbies:
+        return (
+          <MyHobbies
+            projects={store.projects}
+            materials={store.materials}
+            onAddProject={store.addProject}
+            onUpdateProject={store.updateProject}
+            onDeleteProject={store.deleteProject}
+            onAddMaterial={store.addMaterial}
+            onUpdateMaterial={store.updateMaterial}
+            onDeleteMaterial={store.deleteMaterial}
+          />
+        );
+      case Tab.Shopping:
+        return (
+          <ShoppingList 
+            projects={store.projects}
+            materials={store.materials}
+            onUpdateMaterial={store.updateMaterial}
+          />
+        );
+      case Tab.Explore:
+        return (
+          <Explore 
+            projects={store.projects}
+            onAddProject={store.addProject}
+          />
+        );
+      case Tab.Account:
+        return (
+          <Account 
+            onExport={store.exportData}
+            onImport={store.importData}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen text-white pb-20 overflow-hidden relative bg-slate-900">
+      <div className="fixed inset-0 pointer-events-none bg-gradient-to-b from-transparent to-black/20" />
+      
+      <main className="max-w-2xl mx-auto h-screen p-4 md:p-6 relative z-10">
+        {renderContent()}
+      </main>
+
+      {/* FIRST-TIME TUTORIAL OVERLAY */}
+      {!store.hasSeenTutorial && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
+          <AnimatedContent distance={40} direction="vertical" reverse duration={0.8}>
+            <div className="bg-slate-800 border border-white/10 p-8 rounded-3xl max-w-sm shadow-2xl">
+              <h2 className="text-2xl font-bold text-white mb-3">Welcome to Hobby Hop! ✨</h2>
+              <p className="text-slate-400 mb-6">
+                Discover new passions in **Explore** and track your project supplies in **Shopping List**.
+              </p>
+              <button 
+                onClick={store.completeTutorial}
+                className="w-full py-4 bg-white text-slate-900 rounded-2xl font-bold hover:bg-teal-50 transition-colors"
+              >
+                Let's Go!
+              </button>
+            </div>
+          </AnimatedContent>
+        </div>
+      )}
+
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+    </div>
+  );
 };
 
-export const useHobbyStore = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const storedV2 = localStorage.getItem(STORAGE_KEY);
-    const storedV1 = localStorage.getItem('hobby_hop_data_v1');
-
-    if (storedV2) {
-      try {
-        const parsed: AppData = JSON.parse(storedV2);
-        setProjects(parsed.projects || []);
-        setMaterials(parsed.materials || []);
-        setHasSeenTutorial(parsed.hasSeenTutorial || false);
-      } catch (e) {
-        console.error("Failed to parse stored data", e);
-      }
-    } else if (storedV1) {
-      try {
-        const parsedV1 = JSON.parse(storedV1);
-        const migratedProjects = parsedV1.projects.map((p: any) => ({
-          ...p,
-          notes: typeof p.notes === 'string' 
-            ? [{ id: crypto.randomUUID(), content: p.notes, createdAt: Date.now() }] 
-            : [],
-          status: 'in_progress',
-          progress: 0,
-          endGoal: 'No goal set yet.'
-        }));
-        setProjects(migratedProjects);
-        setMaterials(parsedV1.materials);
-        setHasSeenTutorial(false);
-      } catch (e) {
-        setProjects([]);
-        setMaterials([]);
-      }
-    } else {
-      setProjects(DEFAULT_DATA.projects);
-      setMaterials(DEFAULT_DATA.materials);
-      setHasSeenTutorial(DEFAULT_DATA.hasSeenTutorial);
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (loaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-        projects, 
-        materials, 
-        hasSeenTutorial 
-      }));
-    }
-  }, [projects, materials, hasSeenTutorial, loaded]);
-
-  const completeTutorial = useCallback(() => {
-    setHasSeenTutorial(true);
-  }, []);
-
-  const addProject = (project: Project) => setProjects(prev => [project, ...prev]);
-  const updateProject = (id: string, updates: Partial<Project>) => setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  const deleteProject = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
-    setMaterials(prev => prev.filter(m => m.projectId !== id));
-  };
-  const addMaterial = (material: Material) => setMaterials(prev => [...prev, material]);
-  const updateMaterial = (id: string, updates: Partial<Material>) => setMaterials(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
-  const deleteMaterial = (id: string) => setMaterials(prev => prev.filter(m => m.id !== id));
-
-  const exportData = () => {
-    const dataStr = JSON.stringify({ projects, materials, hasSeenTutorial }, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    
-    // Using standard quotes and "+" to avoid backtick encoding errors
-    const dateString = new Date().toISOString().slice(0, 10);
-    link.download = "hobby-hop-backup-" + dateString + ".json";
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  const importData = (jsonData: string) => {
-    try {
-      const parsed: AppData = JSON.parse(jsonData);
-      if (Array.isArray(parsed.projects) && Array.isArray(parsed.materials)) {
-        setProjects(parsed.projects);
-        setMaterials(parsed.materials);
-        setHasSeenTutorial(parsed.hasSeenTutorial || false);
-        return true;
-      }
-    } catch (e) { console.error("Import failed", e); }
-    return false;
-  };
-
-  return {
-    projects, materials, hasSeenTutorial, completeTutorial, loaded,
-    addProject, updateProject, deleteProject, addMaterial, updateMaterial, 
-    deleteMaterial, exportData, importData
-  };
-};
+// Essential default export for index.tsx to find this module
+export default App;
