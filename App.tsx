@@ -65,7 +65,9 @@ const App: React.FC = () => {
             <div className="bg-slate-800 border border-white/10 p-8 rounded-3xl max-w-sm shadow-2xl">
               <h2 className="text-2xl font-bold text-white mb-3">Welcome to Hobby Hop! ✨</h2>
               <p className="text-slate-400 mb-6">
-                Discover new passions in **Explore** and track your project supplies in **Shopping List**.
+                Track Your Hobbies
+                Discover new passions in ✨Explore 
+                Track your project supplies in ✨Shopping List.
               </p>
               <button 
                 onClick={store.completeTutorial}
