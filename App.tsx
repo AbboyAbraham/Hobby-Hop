@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHobbyStore } from './hooks/useHobbyStore';
 import { BottomNav } from './components/BottomNav';
 import { MyHobbies } from './views/MyHobbies';
@@ -12,17 +12,17 @@ import AnimatedContent from './components/AnimatedContent';
 const App: React.FC = () => {
   const store = useHobbyStore();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.Hobbies);
-  
-  // 1. Reset showLanding to true on every refresh
-  // We no longer skip this based on hasSeenTutorial
   const [showLanding, setShowLanding] = useState(true);
 
   if (!store.loaded) return <div className="min-h-screen bg-slate-900" />;
 
-  // 2. This will now show every single time the app is searched/loaded
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)}
-             isReturningUser={store.hasSeenTutorial} >;
+    return (
+      <LandingPage 
+        onStart={() => setShowLanding(false)} 
+        isReturningUser={store.hasSeenTutorial} 
+      />
+    );
   }
 
   const renderContent = () => {
@@ -59,7 +59,6 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
 
-      {/* 3. The Tutorial still only triggers if they've never completed it before */}
       {!store.hasSeenTutorial && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
           <AnimatedContent distance={40} direction="vertical" reverse duration={0.8}>
