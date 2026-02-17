@@ -34,7 +34,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, isReturningUs
         distance={150}
         direction="vertical"
         reverse={true}
-        duration={1.2}
+        duration={0.5}
         ease="power3.out"
         initialOpacity={0}
         animateOpacity={true}
@@ -42,8 +42,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, isReturningUs
         threshold={0.1}
         delay={0.2}
         disappearAfter={isExiting ? 0.01 : 0}
-        disappearDuration={0.8}
-        disappearEase="power3.inOut"
+        disappearDuration={0.3}
+        disappearEase="circ.in"
         onDisappearanceComplete={onStart}
       >
         {/* 3. STATIC CONTENT CONTAINER */}
